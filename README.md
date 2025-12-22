@@ -1,0 +1,301 @@
+# MCP Code Search
+
+Semantic code search MCP server using vector embeddings and local-first storage.
+
+## Features
+
+- **Language-Aware Code Splitting**: Automatically detects file types and uses appropriate separators for 25+ programming languages
+- **Local Vector Search**: Uses SQLite-vec for fast, local-first vector search without external services
+- **Gitignore Support**: Respects `.gitignore` patterns and custom ignore rules
+- **Background Indexing**: Automatically indexes changed files via git delta detection
+- **MCP Tools**: Four MCP tools for searching and monitoring indexing status
+
+## Installation
+
+```bash
+# Install dependencies
+uv sync
+
+# Or manually install
+uv add pydantic pydantic-settings langchain langchain-community langchain-text-splitters sentence-transformers sqlite-vec sqlalchemy pathspec
+```
+
+## Usage
+
+### Standalone Testing
+
+```bash
+# Test the server directly
+uv run main.py
+```
+
+### Configure in Claude Code
+
+Add to your Claude Code MCP configuration file:
+
+**Location:** `~/.config/claude-code/mcp.json` (Linux/Mac) or `%APPDATA%\claude-code\mcp.json` (Windows)
+
+```json
+{
+  "mcpServers": {
+    "code-search": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/mcp-code-search",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "MCP_CS_PROJECT_ROOT": "/path/to/project/you/want/to/search"
+      }
+    }
+  }
+}
+```
+
+**Example Configuration:**
+
+```json
+{
+  "mcpServers": {
+    "code-search": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/Users/username/mcp-code-search",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "MCP_CS_PROJECT_ROOT": "/Users/username/my-project",
+        "MCP_CS_INDEX_INTERVAL": "600"
+      }
+    }
+  }
+}
+```
+
+### Configure in Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "code-search": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/mcp-code-search",
+        "run",
+        "main.py"
+      ],
+      "env": {
+        "MCP_CS_PROJECT_ROOT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+### Verify Installation
+
+After adding the configuration:
+
+1. **Restart Claude Code/Desktop**
+2. **Check server status** - You should see "code-search" in the MCP servers list
+3. **Test a search** - Try asking: "Search for authentication logic in the codebase"
+
+The first run will:
+- ✅ Validate git repository
+- ✅ Add `.mcp-code-search/` to your project's `.gitignore`
+- ✅ Download the embedding model (~1.2GB, one-time)
+- ✅ Index all git-tracked files
+- ✅ Start background monitoring for changes
+
+### Configuration
+
+Configure via environment variables with `MCP_CS_` prefix:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_CS_PROJECT_ROOT` | `.` | Root directory to index |
+| `MCP_CS_DB_PATH` | `.mcp-code-search/db.sqlite` | SQLite database path |
+| `MCP_CS_EMBEDDER_MODEL` | `intfloat/multilingual-e5-large-instruct` | HuggingFace model name |
+| `MCP_CS_CHUNK_SIZE` | `1000` | Chunk size in characters |
+| `MCP_CS_CHUNK_OVERLAP` | `200` | Chunk overlap in characters |
+| `MCP_CS_INDEX_INTERVAL` | `300` | Background index interval (seconds) |
+
+Example `.env`:
+```bash
+MCP_CS_PROJECT_ROOT=/path/to/your/project
+MCP_CS_INDEX_INTERVAL=600
+```
+
+## MCP Tools
+
+### 1. `search_codebase(query, limit=10)`
+
+Search codebase using semantic similarity.
+
+**Args:**
+- `query`: Natural language search query
+- `limit`: Maximum results (default: 10)
+
+**Returns:** List of matching code chunks with file paths and line numbers
+
+### 2. `search_files(query, limit=20)`
+
+Search for files by name or path pattern.
+
+**Args:**
+- `query`: Filename or path pattern
+- `limit`: Maximum results (default: 20)
+
+**Returns:** List of matching file paths with indexing status
+
+### 3. `is_file_indexed(file_path)`
+
+Check indexing status of a specific file.
+
+**Args:**
+- `file_path`: Path relative to project root
+
+**Returns:** Indexing status details (status, chunk count, errors)
+
+### 4. `get_indexing_status(compact=True)`
+
+Get overall indexing status.
+
+**Args:**
+- `compact`: If True, return summary. If False, return per-file details.
+
+**Returns:** Indexing status summary or detailed breakdown
+
+## Architecture
+
+### Project Structure
+
+```
+mcp-code-search/
+├── main.py                   # FastMCP server + tools
+├── settings/                 # Pydantic settings
+├── embedders/                # Embedding providers
+├── chunkers/                 # Language-aware text splitters
+├── db/                       # Database & vector store
+│   └── vectorstore/          # SQLite-vec integration
+└── index/                    # Indexing logic
+    ├── delta.py              # Git delta detection
+    ├── gitignore.py          # .gitignore filtering
+    ├── manager.py            # Indexing orchestration
+    └── worker.py             # Background worker
+```
+
+### Supported Languages
+
+Python, JavaScript/TypeScript, Go, Rust, C/C++, Java, Kotlin, Scala, Ruby, PHP, Swift, C#, Lua, Perl, Haskell, Elixir, Solidity, Protobuf, PowerShell, HTML, Markdown, LaTeX, RST
+
+### How It Works
+
+1. **Startup**: Initializes embedder, chunker, database, and vector store
+2. **Initial Index**: Scans git-tracked files and indexes supported file types
+3. **Background Indexing**: Periodically checks for changed files via git delta
+4. **Search**: Embeds queries and performs vector similarity search
+5. **Gitignore**: Respects `.gitignore` patterns to exclude files
+
+## Troubleshooting
+
+### "Not a git repository" Error
+
+The server requires a git repository for indexing. Solutions:
+
+```bash
+# Option 1: Initialize git in your project
+cd /path/to/your/project
+git init
+
+# Option 2: Set project root to a git repo
+export MCP_CS_PROJECT_ROOT=/path/to/git/repo
+
+# Option 3: Add to .env file
+echo "MCP_CS_PROJECT_ROOT=/path/to/git/repo" >> .env
+```
+
+### Model Download Issues
+
+First run downloads ~1.2GB embedding model. If it fails:
+
+```bash
+# Manually download model
+python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-large-instruct')"
+```
+
+### Performance Tips
+
+- **Chunk Size**: Larger chunks = fewer but longer results
+- **Index Interval**: Higher interval = less CPU usage
+- **Ignore Patterns**: Add large binary/generated files to speed up indexing
+
+```bash
+# Environment variables for tuning
+export MCP_CS_CHUNK_SIZE=1500        # Larger chunks
+export MCP_CS_INDEX_INTERVAL=900     # Index every 15 min
+```
+
+## Development
+
+### Requirements
+
+- Python 3.13+
+- PyTorch (for embeddings)
+- Git (for delta detection)
+
+### Device Detection
+
+Automatically detects best device:
+- CUDA (NVIDIA GPUs)
+- MPS (Apple Silicon)
+- CPU (fallback)
+
+### Project Structure
+
+All code follows the architecture in the implementation plan:
+- **settings/**: Pydantic configuration
+- **embedders/**: Embedding providers with device detection
+- **chunkers/**: Language-aware text splitters
+- **db/**: Database models and SQLite-vec integration
+- **index/**: Git delta, gitignore filtering, background worker
+
+## Examples
+
+### Using in Claude Code
+
+```
+User: "Search for error handling code"
+Assistant: *Uses search_codebase tool*
+Found error handling in:
+- src/api/handler.py:45-67
+- src/utils/errors.py:12-34
+
+User: "Find all test files"
+Assistant: *Uses search_files tool with query="test_"*
+Found test files:
+- tests/test_api.py
+- tests/test_utils.py
+```
+
+### Checking Index Status
+
+```
+User: "What files are indexed?"
+Assistant: *Uses get_indexing_status(compact=True)*
+Total: 234 files
+- completed: 230
+- in_progress: 2
+- failed: 2
+```
+
+## License
+
+See LICENSE file.
