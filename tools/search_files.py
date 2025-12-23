@@ -10,7 +10,29 @@ def register_search_files(mcp: FastMCP, components) -> None:
 
     @mcp.tool()
     async def search_files(query: str, limit: int = 20) -> list[dict]:
-        """Search for files by name or path pattern.
+        """Search for files by name or path pattern - Use for discovering related files and dependencies.
+
+        **Use this tool when:**
+        - Finding all files related to a feature (e.g., "auth", "payment", "user")
+        - Locating test files before implementing features (e.g., "test_")
+        - Discovering configuration files (e.g., "config", ".env", "settings")
+        - Finding related components (e.g., "models", "views", "controllers")
+        - Identifying migration or schema files before database changes
+        - Locating utility and helper files to understand available tools
+
+        **Implementation workflow:**
+        1. Use this to find related files before implementing
+        2. Use search_codebase to understand the code patterns in those files
+        3. Use is_file_indexed to verify indexing status if search returns incomplete results
+        4. Implement following discovered patterns and reusing existing utilities
+
+        **Example queries:**
+        - "test_api" - find all API test files
+        - "model" - discover data models across the codebase
+        - "handler" or "controller" - find request handlers
+        - "util" or "helper" - locate utility modules to reuse
+        - "migration" - find database migrations before schema changes
+        - "config" or "settings" - understand configuration structure
 
         Args:
             query: Filename or path pattern to search (e.g., "config", "test_")

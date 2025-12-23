@@ -18,9 +18,10 @@ logger = logging.getLogger(__name__)
 class IndexWorker:
     """Background worker for continuous indexing."""
 
-    def __init__(self, settings: Settings, index_manager: IndexManager):
+    def __init__(self, settings: Settings, index_manager: IndexManager, chunker):
         self._settings = settings
         self._index_manager = index_manager
+        self._chunker = chunker  # Need chunker for language detection
         self._gitignore = GitignoreFilter(settings.project_root)
         self._running = False
         self._task: asyncio.Task | None = None
@@ -102,6 +103,7 @@ class IndexWorker:
         deleted = 0
         skipped = 0
         failed = 0
+        files_to_summarize = []
 
         for change in changes:
             logger.debug(f"Processing change: {change.path} (status={change.status})")
@@ -128,8 +130,35 @@ class IndexWorker:
             )
             if success:
                 indexed += 1
+
+                # Collect for batch summarization
+                if self._settings.enable_summaries:
+                    try:
+                        full_path = Path(self._settings.project_root) / change.path
+                        content = full_path.read_text(encoding="utf-8")
+                        language = self._chunker.detect_language(change.path)
+                        if language:
+                            files_to_summarize.append((change.path, content, language.value))
+                            logger.debug(f"Collected {change.path} for summarization")
+                        else:
+                            logger.debug(f"No language detected for {change.path}, skipping summary")
+                    except Exception as e:
+                        logger.warning(f"Could not prepare {change.path} for summarization: {e}")
+                else:
+                    logger.debug(f"Summaries disabled, skipping {change.path}")
             else:
                 failed += 1
+
+        # Batch summarize files (model loaded once)
+        logger.info(f"Collected {len(files_to_summarize)} files for summarization (enable_summaries={self._settings.enable_summaries})")
+        if files_to_summarize:
+            logger.info(f"Batch summarizing {len(files_to_summarize)} files...")
+            await asyncio.to_thread(
+                self._index_manager.batch_summarize_files,
+                files_to_summarize
+            )
+        else:
+            logger.warning("No files collected for summarization")
 
         # Update last commit for next delta
         new_commit = get_current_commit(self._settings.project_root)

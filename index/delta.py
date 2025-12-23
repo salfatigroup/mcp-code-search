@@ -1,4 +1,4 @@
-"""Git delta detection for incremental indexing."""
+"""File discovery for indexing - scans filesystem directly."""
 import logging
 import subprocess
 from pathlib import Path
@@ -9,16 +9,46 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class FileChange:
-    """Represents a file change detected by git."""
+    """Represents a file change detected."""
     path: str
     status: str  # "added", "modified", "deleted"
 
 
-def get_git_delta(project_root: str, since_commit: str | None = None) -> list[FileChange]:
-    """Get changed files using git.
+def get_all_files(project_root: str) -> list[FileChange]:
+    """Get all files in the project by walking the directory tree.
 
-    Note: git ls-files only returns TRACKED files (committed to git).
-    Untracked files will not appear until they are added and committed.
+    This scans the actual filesystem, not just git-tracked files.
+    The gitignore filter will be applied separately by the worker.
+    """
+    root = Path(project_root).resolve()
+    logger.debug(f"Scanning all files in {root}")
+
+    changes = []
+    for file_path in root.rglob("*"):
+        # Skip directories
+        if file_path.is_dir():
+            continue
+
+        # Get relative path
+        try:
+            rel_path = file_path.relative_to(root)
+            changes.append(FileChange(
+                path=str(rel_path),
+                status="added"
+            ))
+        except ValueError:
+            # File is outside project root
+            continue
+
+    logger.info(f"Found {len(changes)} total files in {root}")
+    return changes
+
+
+def get_git_delta(project_root: str, since_commit: str | None = None) -> list[FileChange]:
+    """Get changed files using git diff (for incremental updates).
+
+    Only used for incremental indexing to detect what changed since last run.
+    For full indexing, use get_all_files() instead.
     """
     root = Path(project_root)
 
@@ -26,33 +56,25 @@ def get_git_delta(project_root: str, since_commit: str | None = None) -> list[Fi
         cmd = ["git", "diff", "--name-status", since_commit, "HEAD"]
         logger.debug(f"Getting changed files since commit: {since_commit}")
     else:
-        cmd = ["git", "ls-files"]
-        logger.debug(f"Getting all tracked files in {root}")
+        # For full index, scan filesystem directly
+        logger.debug(f"Full index requested, using filesystem scan")
+        return get_all_files(project_root)
 
     result = subprocess.run(cmd, cwd=root, capture_output=True, text=True)
 
     if result.returncode != 0:
-        logger.error(f"Git command failed: {result.stderr}")
-        return []
+        logger.warning(f"Git diff failed, falling back to full scan: {result.stderr}")
+        return get_all_files(project_root)
 
     changes = []
     for line in result.stdout.strip().split("\n"):
         if not line:
             continue
-        if since_commit:
-            status, path = line.split("\t", 1)
-            status_map = {"A": "added", "M": "modified", "D": "deleted"}
-            changes.append(FileChange(path=path, status=status_map.get(status, "modified")))
-        else:
-            changes.append(FileChange(path=line, status="added"))
+        status, path = line.split("\t", 1)
+        status_map = {"A": "added", "M": "modified", "D": "deleted"}
+        changes.append(FileChange(path=path, status=status_map.get(status, "modified")))
 
-    logger.debug(f"Git returned {len(changes)} files")
-    if len(changes) == 0:
-        logger.warning(
-            "No tracked files found. Note: git ls-files only returns files "
-            "that have been committed. Run 'git add .' and 'git commit' first."
-        )
-
+    logger.debug(f"Git diff returned {len(changes)} changed files")
     return changes
 
 

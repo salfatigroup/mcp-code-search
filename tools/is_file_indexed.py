@@ -10,7 +10,21 @@ def register_is_file_indexed(mcp: FastMCP, components) -> None:
 
     @mcp.tool()
     async def is_file_indexed(file_path: str) -> dict:
-        """Check the indexing status of a specific file.
+        """Check the indexing status of a specific file - Use to verify search completeness.
+
+        **Use this tool when:**
+        - Search results seem incomplete or missing expected files
+        - Verifying a newly created or modified file is indexed
+        - Debugging why a file isn't appearing in search results
+        - Understanding chunk count for large files (may need multiple searches)
+        - Investigating indexing errors before implementation
+
+        **Implementation workflow:**
+        - If status is "not_found": File may be gitignored or not yet indexed
+        - If status is "pending": Wait for background indexing or trigger manual index
+        - If status is "failed": Check error_message before relying on search results
+        - If status is "completed": File is fully searchable with {chunk_count} chunks
+        - High chunk_count means file is large, may need targeted searches
 
         Args:
             file_path: Path to the file relative to project root

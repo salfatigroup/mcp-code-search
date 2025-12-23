@@ -33,6 +33,15 @@ class Settings(BaseSettings):
         default=[".py", ".js", ".ts", ".tsx", ".go", ".rs", ".java", ".md", ".json"]
     )
 
+    # File summarization
+    enable_summaries: bool = Field(default=True, description="Enable AI file summarization")
+    summarizer_model: str = Field(default="mistralai/Ministral-3-3B-Instruct-2512")
+    summary_batch_size: int = Field(default=10, description="Number of files to summarize per batch")
+
+    # AST analysis
+    enable_ast: bool = Field(default=True, description="Enable AST-based code intelligence")
+    ast_max_file_size: int = Field(default=100_000, description="Skip AST for files larger than this")
+
 
 def get_settings() -> Settings:
     """Factory function to get settings instance."""

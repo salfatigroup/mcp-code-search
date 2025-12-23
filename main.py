@@ -16,13 +16,19 @@ from embedders import load_embedder
 from chunkers import load_chunker
 from db.connection import DatabaseManager
 from db.vectorstore.sqlite import SQLiteVectorStore
+from db.vectorstore.file_summaries import FileSummaryVectorStore
 from index.manager import IndexManager
 from index.worker import IndexWorker
+from summarizers import SimpleSummarizer
+from analyzers.tree_sitter import TreeSitterAnalyzer
 from tools import (
     register_search_codebase,
     register_search_files,
     register_is_file_indexed,
     register_get_indexing_status,
+    register_find_callers,
+    register_find_callees,
+    register_get_dependency_tree,
 )
 
 # Configure logging
@@ -100,6 +106,9 @@ class Components:
     chunker = None
     db = None
     vectorstore = None
+    summary_store = None
+    summarizer = None
+    analyzer = None
     index_manager = None
     index_worker = None
 
@@ -118,14 +127,28 @@ async def lifespan(server: FastMCP):
     components.chunker = load_chunker(settings)
     components.db = DatabaseManager(settings.db_path)
     components.vectorstore = SQLiteVectorStore(settings.db_path, components.embedder)
+
+    # Initialize optional components
+    if settings.enable_summaries:
+        logger.info("Initializing file summary components...")
+        components.summary_store = FileSummaryVectorStore(settings.db_path, components.embedder)
+        components.summarizer = SimpleSummarizer()  # Use simple rule-based summarizer
+
+    if settings.enable_ast:
+        logger.info("Initializing AST analyzer...")
+        components.analyzer = TreeSitterAnalyzer()
+
     components.index_manager = IndexManager(
         settings,
         components.db,
         components.vectorstore,
         components.chunker,
         components.embedder,
+        summarizer=components.summarizer,
+        analyzer=components.analyzer,
+        summary_store=components.summary_store,
     )
-    components.index_worker = IndexWorker(settings, components.index_manager)
+    components.index_worker = IndexWorker(settings, components.index_manager, components.chunker)
 
     # Start background indexing worker
     logger.info("Starting background indexing worker...")
@@ -146,6 +169,12 @@ register_search_codebase(mcp, components)
 register_search_files(mcp, components)
 register_is_file_indexed(mcp, components)
 register_get_indexing_status(mcp, components)
+
+# Register AST tools if enabled
+if settings.enable_ast:
+    register_find_callers(mcp, components)
+    register_find_callees(mcp, components)
+    register_get_dependency_tree(mcp, components)
 
 if __name__ == "__main__":
     mcp.run()

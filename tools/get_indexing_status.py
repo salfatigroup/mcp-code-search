@@ -10,7 +10,21 @@ def register_get_indexing_status(mcp: FastMCP, components) -> None:
 
     @mcp.tool()
     async def get_indexing_status(compact: bool = True) -> dict:
-        """Get the overall indexing status of the codebase.
+        """Get the overall indexing status of the codebase - Use to ensure search reliability.
+
+        **Use this tool when:**
+        - Starting a new implementation session to verify index health
+        - Search results seem incomplete or outdated
+        - After making significant file changes to check re-indexing
+        - Debugging indexing issues (use compact=False for details)
+        - Understanding codebase coverage before major refactoring
+
+        **Implementation workflow:**
+        - Check at session start to ensure index is up-to-date
+        - If many files are "pending", wait or trigger full re-index
+        - If files show "failed" status, investigate before implementing
+        - Use compact=False to get per-file details when debugging
+        - High total count with low errors means reliable search results
 
         Args:
             compact: If True, return summary counts. If False, return per-file details.

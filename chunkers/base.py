@@ -1,17 +1,24 @@
 """Base chunker interface."""
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Chunk:
-    """Represents a chunk of text from a file."""
+    """Represents a chunk of text from a file with AST metadata."""
     content: str
     file_path: str
     start_line: int
     end_line: int
     language: str | None  # Detected language (python, js, etc.)
-    metadata: dict
+
+    # AST metadata for enhanced search
+    defined_symbols: list[str] = field(default_factory=list)      # Symbols defined in this chunk
+    referenced_symbols: list[str] = field(default_factory=list)   # Symbols used in this chunk
+    imports: list[str] = field(default_factory=list)              # Import statements in chunk
+    calls: list[str] = field(default_factory=list)                # Function calls in chunk
+
+    metadata: dict = field(default_factory=dict)
 
 
 class BaseChunker(ABC):
