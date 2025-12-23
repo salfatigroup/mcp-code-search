@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server for semantic code search with AST intelligence and vector embeddings"
 readme = "README.md"
 requires-python = ">=3.13"
-license = {text = "MIT"}
+license = "Apache-2.0"
 authors = [
     {name = "Elon Salfati", email = "elon@salfatigroup.com"}
 ]
@@ -38,3 +38,20 @@ dependencies = [
 Homepage = "https://github.com/salfatigroup/mcp-code-search"
 Repository = "https://github.com/salfatigroup/mcp-code-search"
 Issues = "https://github.com/salfatigroup/mcp-code-search/issues"
+
+[tool.setuptools]
+packages = [
+    "settings",
+    "embedders",
+    "chunkers",
+    "db",
+    "db.vectorstore",
+    "index",
+    "analyzers",
+    "analyzers.extractors",
+    "summarizers",
+    "tools"
+]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
