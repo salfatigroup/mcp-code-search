@@ -1,7 +1,7 @@
 [project]
-name = "mcp-code-search"
+name = "mcp-code-intelligence"
 version = "0.1.0"
-description = "MCP server for semantic code search with AST intelligence and vector embeddings"
+description = "MCP server for intelligent code search with AST analysis, call graphs, and semantic embeddings"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "Apache-2.0"
@@ -35,9 +35,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/salfatigroup/mcp-code-search"
-Repository = "https://github.com/salfatigroup/mcp-code-search"
-Issues = "https://github.com/salfatigroup/mcp-code-search/issues"
+Homepage = "https://github.com/salfatigroup/mcp-code-intelligence"
+Repository = "https://github.com/salfatigroup/mcp-code-intelligence"
+Issues = "https://github.com/salfatigroup/mcp-code-intelligence/issues"
 
 [tool.setuptools]
 packages = [

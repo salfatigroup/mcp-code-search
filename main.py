@@ -162,7 +162,7 @@ async def lifespan(server: FastMCP):
     await components.index_worker.stop()
 
 # Create MCP server
-mcp = FastMCP(name="mcp-code-search", lifespan=lifespan)
+mcp = FastMCP(name="mcp-code-intelligence", lifespan=lifespan)
 
 # Register tools
 register_search_codebase(mcp, components)

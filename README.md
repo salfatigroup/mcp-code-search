@@ -1,6 +1,6 @@
-# MCP Code Search
+# MCP Code Intelligence
 
-Semantic code search MCP server with AST intelligence, call graphs, and vector embeddings.
+Intelligent code search MCP server with AST analysis, call graphs, dependency tracking, and semantic embeddings.
 
 ## Features
 
@@ -27,25 +27,25 @@ Semantic code search MCP server with AST intelligence, call graphs, and vector e
 
 ```bash
 # Run directly with uvx (no installation needed)
-uvx mcp-code-search
+uvx mcp-code-intelligence
 ```
 
 ### Install as Tool
 
 ```bash
 # Install permanently
-uv tool install mcp-code-search
+uv tool install mcp-code-intelligence
 
 # Run
-mcp-code-search
+mcp-code-intelligence
 ```
 
 ### Development Installation
 
 ```bash
 # Clone repository
-git clone https://github.com/salfatigroup/mcp-code-search
-cd mcp-code-search
+git clone https://github.com/salfatigroup/mcp-code-intelligence
+cd mcp-code-intelligence
 
 # Install dependencies
 uv sync
@@ -72,9 +72,9 @@ Add to your Claude Code MCP configuration file:
 ```json
 {
   "mcpServers": {
-    "code-search": {
+    "code-intelligence": {
       "command": "uvx",
-      "args": ["mcp-code-search"],
+      "args": ["mcp-code-intelligence"],
       "env": {
         "MCP_CS_PROJECT_ROOT": "/path/to/your/project"
       }
@@ -88,9 +88,9 @@ Add to your Claude Code MCP configuration file:
 ```json
 {
   "mcpServers": {
-    "code-search": {
+    "code-intelligence": {
       "command": "uvx",
-      "args": ["mcp-code-search"],
+      "args": ["mcp-code-intelligence"],
       "env": {
         "MCP_CS_PROJECT_ROOT": "/Users/username/my-project",
         "MCP_CS_INDEX_INTERVAL": "600",
@@ -107,9 +107,9 @@ Add to your Claude Code MCP configuration file:
 ```json
 {
   "mcpServers": {
-    "code-search": {
+    "code-intelligence": {
       "command": "uv",
-      "args": ["--directory", "/path/to/mcp-code-search", "run", "main.py"],
+      "args": ["--directory", "/path/to/mcp-code-intelligence", "run", "main.py"],
       "env": {
         "MCP_CS_PROJECT_ROOT": "/path/to/project"
       }
@@ -125,9 +125,9 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) o
 ```json
 {
   "mcpServers": {
-    "code-search": {
+    "code-intelligence": {
       "command": "uvx",
-      "args": ["mcp-code-search"],
+      "args": ["mcp-code-intelligence"],
       "env": {
         "MCP_CS_PROJECT_ROOT": "/path/to/your/project"
       }
